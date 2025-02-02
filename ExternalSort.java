@@ -9,7 +9,6 @@ public class ExternalSort {
     public void split(File arquivo) throws IOException{
         FileReader fileReader = new FileReader(arquivo);
         BufferedReader reader = new BufferedReader(fileReader);
-        HeapSort heapSort = new HeapSort();
 
         boolean end = false;
         while(!end) {
