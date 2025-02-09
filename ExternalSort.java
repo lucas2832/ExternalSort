@@ -1,38 +1,39 @@
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
 
 public class ExternalSort {
-    private static final int memorySize = 2;
+    private static final int memorySize = 100;
     private static final int numWays = 10;
-    private int offset = 0;
+    private int count = 0;
+    private int swap = 0;
 
     public void split(File arquivo) throws IOException{
-        FileReader fileReader = new FileReader(arquivo);
-        BufferedReader reader = new BufferedReader(fileReader);
+        BufferedReader reader = new BufferedReader(new FileReader(arquivo));
 
-        boolean end = false;
-        while(!end) {
+        String line = reader.readLine();
+        while(line != null) {
 
-            double[] arr1 = createArray(reader);
+            double[] arr1 = new double[memorySize];
+
+            for(int i = 0; i < memorySize; i++) {
+                if(line != null) {
+                    arr1[i] = Double.parseDouble(line);
+                }
+                line = reader.readLine();
+            }
             HeapSort.heapSort(arr1);
-            // salvar em um arquivo
 
-            this.saveFile(arr1, "arq1.txt");
+            this.saveFile(arr1, "arq" + count + ".txt");
+
+            if(count == 7  || line == null) {
+                mergeFile();
+            }
+
+            count++;
+            if(count > 7) {
+                count = 0;
+            }
         }
-
-
-    }
-
-    private double[] createArray(BufferedReader reader) throws IOException {
-        double[] records = new double[memorySize];
-        String line;
-
-        for (int i = 0; i < memorySize; i++) {
-            line = reader.readLine();
-            records[i] = Double.parseDouble(line);
-            offset++;
-        }
-        return records;
     }
 
     private void saveFile(double[] arr, String name) throws IOException {
@@ -42,78 +43,149 @@ public class ExternalSort {
             writer.write(String.valueOf(line));
             writer.newLine();
         }
+
+        writer.close();
     }
 
-    private void mergeFile(String fileName1, String fileName2) throws IOException {
-        BufferedReader reader1 = new BufferedReader(new FileReader(fileName1));
-        BufferedReader reader2 = new BufferedReader(new FileReader(fileName2));
-        BufferedWriter writer = new BufferedWriter(new FileWriter("merged.txt"));
+    private void mergeFile() throws IOException {
 
-        String fileOneLine = reader1.readLine();
-        String fileTwoLine = reader2.readLine();
-        boolean execute = true;
-        while (execute) {
+        if (swap == 0) {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("merged0.txt"));
+            File folder = new File("arquivo\\");
+            File[] files = folder.listFiles();
 
-            if (fileOneLine == null) {
-                String line2 = fileTwoLine;
-
-                execute = line2 != null;
-
-                while (line2 != null) {
-                    writer.write(line2);
-                    writer.newLine();
-
-                    line2 = reader2.readLine();
-                };
+            ArrayList<BufferedReader> readers = new ArrayList<>();
+            for (int i = 0; i <= count; i++) {
+                readers.add(new BufferedReader(new FileReader("arq" + i + ".txt")));
             }
-            if (fileTwoLine == null) {
-                String line1 = fileOneLine;
-
-                execute = line1 != null;
-
-                while (line1 != null) {
-                    writer.write(line1);
-                    writer.newLine();
-
-                    line1 = reader1.readLine();
-                };
+            if (count != 0) {
+                readers.add(new BufferedReader(new FileReader("merged1.txt")));
             }
 
-            // caminho feliz
-            assert fileOneLine != null;
-            assert fileTwoLine != null;
-            if (Double.parseDouble(fileOneLine) < Double.parseDouble(fileTwoLine)) {
-                writer.write(fileOneLine);
-                writer.newLine();
-                fileOneLine = reader1.readLine();
-            } else {
-                writer.write(fileTwoLine);
-                writer.newLine();
-                fileTwoLine = reader2.readLine();
+            ArrayList<Double> numbers = new ArrayList<>();
+
+            for (BufferedReader reader : readers) {
+                String line = reader.readLine();
+                if (line != null) {
+                    try {
+                        numbers.add(Double.parseDouble(line));
+                    } catch (NumberFormatException e) {
+                        System.out.println(line);
+                    }
+                } else {
+                    numbers.add(null);
+                }
             }
+
+            while (!readers.isEmpty()) {
+
+                Result result = min(numbers);
+                if (result == null) {
+                    break; // Evita acessar null
+                }
+                double number = result.getNumber();
+                int index = result.getIndex();
+
+                writer.write(String.valueOf(number) + "\n");
+
+                String nextLine = readers.get(index).readLine();
+
+                if (nextLine != null) {
+                    numbers.set(index, Double.parseDouble(nextLine));
+                } else {
+                    numbers.remove(index);
+                    readers.remove(index);
+                }
+            }
+
+            writer.close();
+        } else {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("merged1.txt"));
+            File folder = new File("arquivo\\");
+            File[] files = folder.listFiles();
+
+            ArrayList<BufferedReader> readers = new ArrayList<>();
+            for (int i = 0; i <= count; i++) {
+                readers.add(new BufferedReader(new FileReader("arq" + i + ".txt")));
+            }
+
+            if (count != 0) {
+                readers.add(new BufferedReader(new FileReader("merged0.txt")));
+            }
+
+            ArrayList<Double> numbers = new ArrayList<>();
+
+            for (BufferedReader reader : readers) {
+                String line = reader.readLine();
+                if (line != null) {
+                    try {
+                        numbers.add(Double.parseDouble(line));
+                    } catch (NumberFormatException e) {
+                        System.out.println(line);
+                    }
+                } else {
+                    numbers.add(null);
+                }
+            }
+
+            while (!readers.isEmpty()) {
+
+                Result result = min(numbers);
+                if (result == null) {
+                    break; // Evita acessar null
+                }
+                double number = result.getNumber();
+                int index = result.getIndex();
+
+                writer.write(String.valueOf(number) + "\n");
+
+                String nextLine = readers.get(index).readLine();
+
+                if (nextLine != null) {
+                    numbers.set(index, Double.parseDouble(nextLine));
+                } else {
+                    numbers.remove(index);
+                    readers.remove(index);
+                }
+
+            }
+
+            writer.close();
+        }
+
+        makeSwap();
+    }
+
+    private Result min (ArrayList<Double> numbers) {
+
+        if (!numbers.isEmpty()) {
+            if (numbers.get(0) != null) {
+                double number = numbers.get(0);
+                int index = 0;
+
+
+                for (int i = 0; i < numbers.size(); i++) {
+                    if (numbers.get(i) != null) {
+                        if (number > numbers.get(i)) {
+                            number = numbers.get(i);
+                            index = i;
+                        }
+                    }
+                }
+
+                Result result = new Result(number, index);
+                return result;
+            }
+
+        }
+        return null;
+    }
+
+    private void makeSwap() {
+        if (swap == 0) {
+            swap = 1;
+        } else {
+            swap = 0;
         }
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
