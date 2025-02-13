@@ -3,9 +3,9 @@ import java.util.ArrayList;
 
 public class ExternalSort {
     private static final int memorySize = 100;
-    private static final int numWays = 10;
+    //private static final int numWays = 10;
     private int count = 0;
-    private int swap = 0;
+    private int mergCount = 0;
 
     public void split(File arquivo) throws IOException{
         BufferedReader reader = new BufferedReader(new FileReader(arquivo));
@@ -25,15 +25,9 @@ public class ExternalSort {
 
             this.saveFile(arr1, "arq" + count + ".txt");
 
-            if(count == 7  || line == null) {
-                mergeFile();
-            }
-
             count++;
-            if(count > 7) {
-                count = 0;
-            }
         }
+        mergeFile();
     }
 
     private void saveFile(double[] arr, String name) throws IOException {
@@ -43,23 +37,30 @@ public class ExternalSort {
             writer.write(String.valueOf(line));
             writer.newLine();
         }
-
         writer.close();
     }
 
     private void mergeFile() throws IOException {
 
-        if (swap == 0) {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("merged0.txt"));
-            File folder = new File("arquivo\\");
-            File[] files = folder.listFiles();
+        while(mergCount < count) {
+            File file = new File("arq" + count + ".txt");
+            BufferedWriter writer = new BufferedWriter(new FileWriter("arq" + count + ".txt"));
+            count++;
 
             ArrayList<BufferedReader> readers = new ArrayList<>();
-            for (int i = 0; i <= count; i++) {
-                readers.add(new BufferedReader(new FileReader("arq" + i + ".txt")));
-            }
-            if (count != 0) {
-                readers.add(new BufferedReader(new FileReader("merged1.txt")));
+            int lastFiles = count - mergCount;
+
+            if(lastFiles < 9) {
+                for (int i = 0; i < lastFiles; i++) {
+                    readers.add(new BufferedReader(new FileReader("arq" + mergCount + ".txt")));
+                    mergCount++;
+                }
+            } else {
+                for (int i = 0; i < 9; i++) {
+                    readers.add(new BufferedReader(new FileReader("arq" + mergCount + ".txt")));
+                    mergCount++;
+                }
+
             }
 
             ArrayList<Double> numbers = new ArrayList<>();
@@ -86,57 +87,16 @@ public class ExternalSort {
                 double number = result.getNumber();
                 int index = result.getIndex();
 
-                writer.write(String.valueOf(number) + "\n");
-
-                String nextLine = readers.get(index).readLine();
-
-                if (nextLine != null) {
-                    numbers.set(index, Double.parseDouble(nextLine));
-                } else {
-                    numbers.remove(index);
-                    readers.remove(index);
-                }
-            }
-
-            writer.close();
-        } else {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("merged1.txt"));
-            File folder = new File("arquivo\\");
-            File[] files = folder.listFiles();
-
-            ArrayList<BufferedReader> readers = new ArrayList<>();
-            for (int i = 0; i <= count; i++) {
-                readers.add(new BufferedReader(new FileReader("arq" + i + ".txt")));
-            }
-
-            if (count != 0) {
-                readers.add(new BufferedReader(new FileReader("merged0.txt")));
-            }
-
-            ArrayList<Double> numbers = new ArrayList<>();
-
-            for (BufferedReader reader : readers) {
-                String line = reader.readLine();
-                if (line != null) {
-                    try {
-                        numbers.add(Double.parseDouble(line));
-                    } catch (NumberFormatException e) {
-                        System.out.println(line);
+                if (readers.size() == 1) {
+                    String line = String.valueOf(number);
+                    while (line != null) {
+                        writer.write(line + "\n");
+                        line = readers.get(0).readLine();
                     }
-                } else {
-                    numbers.add(null);
+                    numbers.remove(index);
+                    readers.remove(index);
+                    break;
                 }
-            }
-
-            while (!readers.isEmpty()) {
-
-                Result result = min(numbers);
-                if (result == null) {
-                    break; // Evita acessar null
-                }
-                double number = result.getNumber();
-                int index = result.getIndex();
-
                 writer.write(String.valueOf(number) + "\n");
 
                 String nextLine = readers.get(index).readLine();
@@ -147,13 +107,9 @@ public class ExternalSort {
                     numbers.remove(index);
                     readers.remove(index);
                 }
-
             }
-
             writer.close();
         }
-
-        makeSwap();
     }
 
     private Result min (ArrayList<Double> numbers) {
@@ -179,13 +135,5 @@ public class ExternalSort {
 
         }
         return null;
-    }
-
-    private void makeSwap() {
-        if (swap == 0) {
-            swap = 1;
-        } else {
-            swap = 0;
-        }
     }
 }
